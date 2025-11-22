@@ -251,26 +251,41 @@ export default function Home() {
 
         {/* Header */}
         {(!isMobile || !showMobileSidebar) && (
-          <div className="text-center mb-6 md:mb-8 lg:mb-12 w-full">
-            <div className="flex items-center justify-center gap-3 mb-4">
-              <div className="p-2 bg-[#8F8FFF] bg-opacity-20 rounded-xl">
-                <Languages className="text-[#8F8FFF]" size={32} />
-              </div>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                X-Translate
-              </h1>
-            </div>
-            <p className="text-base md:text-lg lg:text-xl text-gray-400 max-w-2xl">
-              Real-time translation powered by{" "}
-              <span className="text-[#8F8FFF]">Free Translation APIs</span>
-            </p>
-            <div className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-500 flex-wrap">
-              <Zap size={14} className="text-yellow-500" />
-              <span>Fast & Accurate</span>
-              <Sparkles size={14} className="text-[#8F8FFF] ml-2 md:ml-4" />
-              <span>100% Free</span>
-            </div>
-          </div>
+        <div className="text-center mb-6 md:mb-8 lg:mb-12 w-full">
+  {/* Logo and Title Section */}
+  <div className="flex flex-col items-center justify-center gap-4 mb-6">
+    <div className="flex items-center justify-center gap-4">
+      <div className="p-3 bg-[#8F8FFF] bg-opacity-20 rounded-2xl shadow-lg">
+        <Languages className="text-[#8F8FFF]" size={36} />
+      </div>
+      <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-white via-[#8F8FFF] to-gray-300 bg-clip-text text-transparent">
+        X-Translate
+      </h1>
+    </div>
+    
+    {/* Tagline */}
+    <p className="text-lg md:text-xl lg:text-2xl text-gray-300 max-w-2xl leading-relaxed">
+      Real-time translation powered by{" "}
+      <span className="text-[#8F8FFF] font-semibold">Free Translation APIs</span>
+    </p>
+  </div>
+
+  {/* Features */}
+  <div className="flex items-center justify-center gap-4 md:gap-6 mt-4 text-sm md:text-base text-gray-400">
+    <div className="flex items-center gap-2 bg-neutral-800 px-3 py-2 rounded-full">
+      <Zap size={16} className="text-yellow-500" />
+      <span>Fast & Accurate</span>
+    </div>
+    <div className="flex items-center gap-2 bg-neutral-800 px-3 py-2 rounded-full">
+      <Sparkles size={16} className="text-[#8F8FFF]" />
+      <span>100% Free</span>
+    </div>
+    <div className="flex items-center gap-2 bg-neutral-800 px-3 py-2 rounded-full">
+      <Globe size={16} className="text-green-500" />
+      <span>100+ Languages</span>
+    </div>
+  </div>
+</div>
         )}
 
         {/* Translation Source Indicator */}
