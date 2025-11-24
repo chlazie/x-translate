@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
   Languages,
   Mic,
@@ -24,6 +25,7 @@ interface TabItem {
   label: string;
   icon: React.ElementType;
   category: "main" | "bottom";
+  path: string;
 }
 
 interface TranslationHistory {
@@ -32,38 +34,51 @@ interface TranslationHistory {
   preview: string;
   timestamp: string;
   date: string;
+  sourceLang: string;
+  targetLang: string;
+  input: string;
+  output: string;
 }
 
 const mainTabs: TabItem[] = [
-  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, category: "main" },
-  { id: "translate", label: "New Translation", icon: Plus, category: "main" },
-  { id: "audio", label: "Audio", icon: Mic, category: "main" },
-  { id: "users", label: "Users", icon: Users, category: "main" },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, category: "main", path: "/dashboard" },
+  { id: "translate", label: "New Translation", icon: Plus, category: "main", path: "/" },
+  { id: "audio", label: "Audio", icon: Mic, category: "main", path: "/audio" },
+  { id: "users", label: "Users", icon: Users, category: "main", path: "/users" },
 ];
 
 const bottomTabs: TabItem[] = [
-  { id: "settings", label: "Settings", icon: Settings, category: "bottom" },
+  { id: "settings", label: "Settings", icon: Settings, category: "bottom", path: "/settings" },
 ];
 
-const mockHistory: TranslationHistory[] = [
-  { id: "1", title: "Business Meeting", preview: "Hello, nice to meet you...", timestamp: "10:30 AM", date: "Today" },
-  { id: "2", title: "Restaurant Order", preview: "I would like to order...", timestamp: "Yesterday", date: "Yesterday" },
-  { id: "3", title: "Travel Directions", preview: "How do I get to the...", timestamp: "9:15 AM", date: "Nov 12" },
-  { id: "4", title: "Technical Support", preview: "My device is not working...", timestamp: "2:45 PM", date: "Nov 10" },
-  { id: "5", title: "Shopping List", preview: "I need to buy groceries...", timestamp: "11:20 AM", date: "Nov 8" },
-];
+interface SidebarProps {
+  onToggle?: (open: boolean) => void;
+}
 
-export default function Sidebar() {
+export default function Sidebar({ onToggle }: SidebarProps) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState("translate");
   const [clickedTab, setClickedTab] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(true);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(256);
   const [isMobile, setIsMobile] = useState(false);
-  const [history] = useState<TranslationHistory[]>(mockHistory);
+  const [history, setHistory] = useState<TranslationHistory[]>([]);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Load history from localStorage on component mount
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('translationHistory');
+    if (savedHistory) {
+      try {
+        setHistory(JSON.parse(savedHistory));
+      } catch (error) {
+        console.error('Error loading history:', error);
+      }
+    }
+  }, []);
 
   // Mobile detection
   useEffect(() => {
@@ -78,6 +93,11 @@ export default function Sidebar() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Notify parent component when sidebar state changes
+  useEffect(() => {
+    onToggle?.(!isCollapsed);
+  }, [isCollapsed, onToggle]);
 
   // Resize functionality
   useEffect(() => {
@@ -121,25 +141,45 @@ export default function Sidebar() {
 
   const toggleSidebar = () => {
     if (isMobile && isCollapsed) {
-      // On mobile, show full sidebar when clicking the arrow
       setIsCollapsed(false);
     } else {
       setIsCollapsed(!isCollapsed);
     }
   };
 
-  const handleTabClick = (tabId: string) => {
-    setActiveTab(tabId);
-    setClickedTab(tabId);
+  const handleTabClick = (tab: TabItem) => {
+    setClickedTab(tab.id);
+    router.push(tab.path);
     
     setTimeout(() => {
       setClickedTab(null);
     }, 200);
 
-    // Auto-collapse on mobile after selection
     if (isMobile) {
       setTimeout(() => setIsCollapsed(true), 300);
     }
+  };
+
+  const handleHistoryItemClick = (item: TranslationHistory) => {
+    // Navigate to translation page with history data
+    const params = new URLSearchParams({
+      input: item.input,
+      output: item.output,
+      sourceLang: item.sourceLang,
+      targetLang: item.targetLang
+    });
+    router.push(`/?${params.toString()}`);
+    
+    if (isMobile) {
+      setTimeout(() => setIsCollapsed(true), 300);
+    }
+  };
+
+  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newHistory = history.filter(item => item.id !== id);
+    setHistory(newHistory);
+    localStorage.setItem('translationHistory', JSON.stringify(newHistory));
   };
 
   const Tooltip = ({ children, text }: { children: React.ReactNode; text: string }) => (
@@ -151,40 +191,43 @@ export default function Sidebar() {
     </div>
   );
 
-  const TabButton = ({ tab }: { tab: TabItem }) => (
-    <Tooltip text={tab.label}>
-      <button
-        onClick={() => handleTabClick(tab.id)}
-        className={`
-          flex items-center w-full p-3 rounded-lg text-sm font-medium transition-all duration-200
-          ${
-            activeTab === tab.id
-              ? "bg-neutral-700 text-white"
-              : "text-gray-400 hover:bg-[#8F8FFF] hover:text-white hover:bg-opacity-20"
-          }
-          ${
-            clickedTab === tab.id
-              ? "bg-[#8F8FFF] bg-opacity-30 text-white scale-95"
-              : ""
-          }
-          ${isCollapsed ? "justify-center" : ""}
-        `}
-      >
-        <tab.icon 
-          size={20} 
-          className={!isCollapsed ? "mr-3 transition-all duration-300" : "transition-all duration-300"} 
-        />
-        {!isCollapsed && <span className="truncate transition-all duration-300">{tab.label}</span>}
-      </button>
-    </Tooltip>
-  );
+  const TabButton = ({ tab }: { tab: TabItem }) => {
+    const isActive = pathname === tab.path || (tab.path === '/' && pathname === '/');
+    
+    return (
+      <Tooltip text={tab.label}>
+        <button
+          onClick={() => handleTabClick(tab)}
+          className={`
+            flex items-center w-full p-3 rounded-lg text-sm font-medium transition-all duration-200
+            ${
+              isActive
+                ? "bg-neutral-700 text-white"
+                : "text-gray-400 hover:bg-[#8F8FFF] hover:text-white hover:bg-opacity-20"
+            }
+            ${
+              clickedTab === tab.id
+                ? "bg-[#8F8FFF] bg-opacity-30 text-white scale-95"
+                : ""
+            }
+            ${isCollapsed ? "justify-center" : ""}
+          `}
+        >
+          <tab.icon 
+            size={20} 
+            className={!isCollapsed ? "mr-3 transition-all duration-300" : "transition-all duration-300"} 
+          />
+          {!isCollapsed && <span className="truncate transition-all duration-300">{tab.label}</span>}
+        </button>
+      </Tooltip>
+    );
+  };
 
-  // Fixed HistoryItem component without nested buttons
   const HistoryItem = ({ item }: { item: TranslationHistory }) => (
     <div className="group relative">
       <div
         className="flex items-start w-full p-3 rounded-lg hover:bg-neutral-700 transition-all duration-200 cursor-pointer"
-        onClick={() => handleTabClick(`history-${item.id}`)}
+        onClick={() => handleHistoryItemClick(item)}
       >
         <MessageSquare size={16} className="text-gray-400 mt-0.5 mr-3 flex-shrink-0 transition-all duration-300" />
         {!isCollapsed && (
@@ -192,14 +235,13 @@ export default function Sidebar() {
             <div className="flex-1 min-w-0">
               <div className="text-white text-sm font-medium truncate">{item.title}</div>
               <div className="text-gray-400 text-xs truncate mt-1">{item.preview}</div>
+              <div className="text-gray-500 text-xs mt-1">
+                {item.sourceLang} → {item.targetLang}
+              </div>
             </div>
             <button 
               className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-600 rounded transition-all duration-200 ml-2 flex-shrink-0"
-              onClick={(e) => {
-                e.stopPropagation();
-                // Handle delete
-                console.log('Delete item:', item.id);
-              }}
+              onClick={(e) => deleteHistoryItem(item.id, e)}
             >
               <Trash2 size={14} className="text-gray-400 transition-all duration-300" />
             </button>
@@ -219,6 +261,12 @@ export default function Sidebar() {
             placeholder="Type a command or search..."
             className="bg-transparent text-white placeholder-gray-400 flex-1 focus:outline-none"
             autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                // Handle command execution
+                setShowCommandPalette(false);
+              }
+            }}
           />
           <div className="flex items-center space-x-2 text-xs text-gray-400 ml-4">
             <kbd className="px-2 py-1 bg-neutral-800 rounded">Esc</kbd>
@@ -226,11 +274,22 @@ export default function Sidebar() {
           </div>
         </div>
         <div className="p-2 max-h-96 overflow-y-auto">
-          {/* Command items would go here */}
-          <div className="p-3 hover:bg-neutral-800 rounded cursor-pointer">
-            <div className="text-white">New Translation</div>
-            <div className="text-gray-400 text-sm">Start a new translation session</div>
-          </div>
+          {mainTabs.map((tab) => (
+            <div
+              key={tab.id}
+              className="p-3 hover:bg-neutral-800 rounded cursor-pointer"
+              onClick={() => {
+                handleTabClick(tab);
+                setShowCommandPalette(false);
+              }}
+            >
+              <div className="text-white flex items-center gap-2">
+                <tab.icon size={16} />
+                {tab.label}
+              </div>
+              <div className="text-gray-400 text-sm">Navigate to {tab.label.toLowerCase()}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -241,7 +300,7 @@ export default function Sidebar() {
       {/* Floating New Translation Button */}
       {isCollapsed && (
         <button
-          onClick={() => handleTabClick("translate")}
+          onClick={() => handleTabClick(mainTabs.find(tab => tab.id === "translate")!)}
           className="fixed bottom-6 left-6 w-14 h-14 bg-[#8F8FFF] rounded-full flex items-center justify-center shadow-lg hover:scale-105 transition-all duration-300 z-40"
         >
           <Plus size={24} className="text-black" />
@@ -307,11 +366,11 @@ export default function Sidebar() {
           </div>
         )}
 
-        {/* New Chat/Translation Button */}
+        {/* New Translation Button */}
         {!isCollapsed && (
           <div className="p-3 border-b border-neutral-800">
             <button
-              onClick={() => handleTabClick("translate")}
+              onClick={() => handleTabClick(mainTabs.find(tab => tab.id === "translate")!)}
               className="flex items-center justify-center w-full p-3 border border-neutral-600 rounded-lg hover:bg-neutral-800 transition-all duration-200 group"
             >
               <Plus size={18} className="mr-2 transition-all duration-300" />
@@ -328,7 +387,7 @@ export default function Sidebar() {
         </nav>
 
         {/* History Section */}
-        {!isCollapsed && (
+        {!isCollapsed && history.length > 0 && (
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-3 pt-4">
               <button
@@ -338,6 +397,9 @@ export default function Sidebar() {
                 <Calendar size={16} className="mr-2 transition-all duration-300" />
                 <span className="text-sm font-medium">History</span>
               </button>
+              <span className="text-xs text-gray-500 bg-neutral-800 px-2 py-1 rounded">
+                {history.length}
+              </span>
             </div>
 
             {showHistory && (
